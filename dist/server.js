@@ -113,59 +113,51 @@ function handleAction(action) {
             });
             break;
         case 'Add Role':
-            pool.query('SELECT * FROM role', (err, result) => {
+            pool.query('SELECT id, name FROM department', (err, result) => {
                 if (err) {
-                    console.error('Error fetching role:', err);
+                    console.error('Error fetching departments:', err);
+                    return;
                 }
-                else {
-                    console.log('\n Current Roles: \n');
-                    console.table(result.rows);
-                }
-                pool.query('SELECT id, name FROM department', (err, result) => {
-                    if (err) {
-                        console.error('Error fetching departments:', err);
-                        return;
-                    }
-                    const departments = result.rows.map((row) => ({
-                        name: row.name,
-                        value: row.id
-                    }));
-                    inquirer.prompt([
-                        {
-                            type: 'input',
-                            name: 'title',
-                            message: 'What is the name of the role?',
-                        },
-                        {
-                            type: 'input',
-                            name: 'salary',
-                            message: 'What is the salary of the role?',
-                        },
-                        {
-                            type: 'list',
-                            name: 'department',
-                            message: 'Which department does the role belong to?',
-                            choices: departments,
-                        },
-                    ]).then((answers) => {
-                        const { title, salary, department } = answers;
-                        pool.query('INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3)', [title, salary, department], (err) => {
-                            if (err) {
-                                console.error('Error inserting into role:', err);
-                            }
-                            else {
-                                console.log(`Role: '${title}' added successfully`);
-                                pool.query('SELECT * FROM role', (err, result) => {
-                                    if (err) {
-                                        console.error('Error fetching departments:', err);
-                                    }
-                                    else {
-                                        console.table(result.rows);
-                                    }
-                                    CurrentDatabase();
-                                });
-                            }
-                        });
+                const departments = result.rows.map((row) => ({
+                    name: row.name,
+                    value: row.id
+                }));
+                inquirer.prompt([
+                    {
+                        type: 'input',
+                        name: 'title',
+                        message: 'What is the name of the role?',
+                    },
+                    {
+                        type: 'input',
+                        name: 'salary',
+                        message: 'What is the salary of the role?',
+                    },
+                    {
+                        type: 'list',
+                        name: 'department',
+                        message: 'Which department does the role belong to?',
+                        choices: departments,
+                    },
+                ]).then((answers) => {
+                    const { title, salary, department } = answers;
+                    pool.query('INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3) RETURNING *', [title, salary, department], (err, result) => {
+                        if (err) {
+                            console.error('Error inserting into role:', err);
+                        }
+                        else {
+                            console.log(`Role: '${title}' added successfully`);
+                            console.log(result.rows[0]);
+                            pool.query('SELECT * FROM role', (err, result) => {
+                                if (err) {
+                                    console.error('Error fetching roles:', err);
+                                }
+                                else {
+                                    console.table(result.rows);
+                                }
+                                askQuestions();
+                            });
+                        }
                     });
                 });
             });
